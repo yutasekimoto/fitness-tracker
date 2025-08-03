@@ -622,7 +622,7 @@
             <button class="nav-tab active" onclick="showTab('daily')">今日の記録</button>
             <button class="nav-tab" onclick="showTab('exercises')">種目管理</button>
             <button class="nav-tab" onclick="showTab('schedule')">スケジュール</button>
-            <button class="nav-tab" onclick="showTab('history')">履歴</button>
+            <button class="nav-tab" onclick="showTab('history')">記録</button>
         </div>
 
         <div class="content">
@@ -669,9 +669,16 @@
                 </div>
             </div>
 
-            <!-- 履歴タブ -->
+            <!-- 記録タブ -->
             <div id="history-tab" class="tab-content" style="display: none;">
-                <h3 style="margin-bottom: 20px;">履歴・統計</h3>
+                <h3 style="margin-bottom: 20px;">記録・統計</h3>
+                
+                <div class="section">
+                    <h4 style="margin-bottom: 15px; color: #495057;">今月のトータル進捗</h4>
+                    <div id="total-progress" style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+                        <!-- 今月のトータル進捗がここに表示される -->
+                    </div>
+                </div>
                 
                 <div class="section">
                     <h4 style="margin-bottom: 15px; color: #495057;">今月の実施率</h4>
@@ -1887,6 +1894,28 @@
 
         // 履歴画面を描画
         function renderHistoryView() {
+            // 今月のトータル進捗を計算・描画
+            const totalProgressContainer = document.getElementById('total-progress');
+            if (Object.keys(monthlyStats).length === 0) {
+                totalProgressContainer.innerHTML = '<div style="color: #666;">統計データがありません</div>';
+            } else {
+                const totalScheduled = Object.values(monthlyStats).reduce((sum, stat) => sum + stat.scheduled, 0);
+                const totalCompleted = Object.values(monthlyStats).reduce((sum, stat) => sum + stat.completed, 0);
+                const totalRate = totalScheduled > 0 ? Math.round((totalCompleted / totalScheduled) * 100) : 0;
+                
+                totalProgressContainer.innerHTML = `
+                    <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px;">
+                        ${totalRate}%
+                    </div>
+                    <div style="background: #e9ecef; border-radius: 10px; height: 20px; margin-bottom: 10px; position: relative;">
+                        <div style="background: linear-gradient(90deg, #28a745, #20c997); border-radius: 10px; height: 100%; width: ${totalRate}%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="color: #666; font-size: 14px;">
+                        ${totalCompleted} / ${totalScheduled} 回実施
+                    </div>
+                `;
+            }
+            
             // 月間統計を描画
             const statsContainer = document.getElementById('monthly-stats');
             if (Object.keys(monthlyStats).length === 0) {
