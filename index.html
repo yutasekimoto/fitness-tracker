@@ -1390,6 +1390,13 @@
                     renderDailyView();
                     if (currentTab === 'exercises') {
                         renderExercisesManagement();
+                    } else if (currentTab === 'schedule') {
+                        renderScheduleManagement();
+                    }
+                    
+                    // 開いているモーダルも更新（新しい運動が選択可能になる）
+                    if (selectedDayOfWeek !== null && document.getElementById('exerciseSelectModal').style.display === 'block') {
+                        updateExerciseSelectModal();
                     }
                     
                     console.log('オフラインモードで運動保存成功');
@@ -1467,12 +1474,17 @@
                     // ローカルストレージに保存
                     saveToLocalStorage();
                     
-                    // 表示を更新
+                    // 表示を更新（全タブで再描画）
                     renderDailyView();
                     if (currentTab === 'exercises') {
                         renderExercisesManagement();
                     } else if (currentTab === 'schedule') {
                         renderScheduleManagement();
+                    }
+                    
+                    // 開いているモーダルを更新
+                    if (selectedDayOfWeek !== null && document.getElementById('exerciseSelectModal').style.display === 'block') {
+                        updateExerciseSelectModal();
                     }
                     
                     console.log('オフラインモードで運動削除成功:', exerciseId);
@@ -1530,14 +1542,12 @@
             }).join('');
         }
 
-        // 運動選択モーダルを開く
-        function openExerciseSelectModal(dayOfWeek) {
-            selectedDayOfWeek = dayOfWeek;
-            const dayNames = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
-            document.getElementById('selectModalTitle').textContent = `${dayNames[dayOfWeek]}に追加する運動を選択`;
+        // 運動選択モーダルの内容を更新
+        function updateExerciseSelectModal() {
+            if (selectedDayOfWeek === null) return;
             
             // 既にスケジュールに入っている運動を除外
-            const scheduledExerciseIds = (schedule[dayOfWeek] || []).map(ex => ex.id);
+            const scheduledExerciseIds = (schedule[selectedDayOfWeek] || []).map(ex => ex.id);
             const availableExercises = exercises.filter(ex => !scheduledExerciseIds.includes(ex.id));
             
             const container = document.getElementById('exercise-select-list');
@@ -1545,11 +1555,20 @@
                 container.innerHTML = '<div class="empty">追加できる運動がありません</div>';
             } else {
                 container.innerHTML = availableExercises.map(exercise => `
-                    <div class="exercise-item exercise-select-item" onclick="addToSchedule(${dayOfWeek}, ${exercise.id})" style="cursor: pointer; background: #f8f9fa; transition: background 0.2s;">
+                    <div class="exercise-item exercise-select-item" onclick="addToSchedule(${selectedDayOfWeek}, ${exercise.id})" style="cursor: pointer; background: #f8f9fa; transition: background 0.2s;">
                         <div class="exercise-name">${exercise.name}</div>
                     </div>
                 `).join('');
             }
+        }
+
+        // 運動選択モーダルを開く
+        function openExerciseSelectModal(dayOfWeek) {
+            selectedDayOfWeek = dayOfWeek;
+            const dayNames = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+            document.getElementById('selectModalTitle').textContent = `${dayNames[dayOfWeek]}に追加する運動を選択`;
+            
+            updateExerciseSelectModal();
             
             preventBodyScroll();
             document.getElementById('exerciseSelectModal').style.display = 'block';
@@ -1588,6 +1607,9 @@
                         renderScheduleManagement();
                     }
                     
+                    // モーダルの選択肢も更新
+                    updateExerciseSelectModal();
+                    
                     console.log('オフラインモードでスケジュール追加成功:', dayOfWeek, exerciseId);
                 } else {
                     // オンラインモードでの追加
@@ -1611,7 +1633,7 @@
                     console.log('スケジュール追加成功:', dayOfWeek, exerciseId);
                 }
                 
-                // モーダルを閉じる
+                // モーダルを閉じる（追加成功時のみ）
                 closeExerciseSelectModal();
                 
             } catch (error) {
@@ -1637,6 +1659,9 @@
                     if (currentTab === 'schedule') {
                         renderScheduleManagement();
                     }
+                    
+                    // モーダルの選択肢も更新（削除した運動が追加可能になる）
+                    updateExerciseSelectModal();
                     
                     console.log('オフラインモードでスケジュール削除成功:', dayOfWeek, exerciseId);
                 } else {
