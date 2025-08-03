@@ -1761,17 +1761,40 @@
             const currentMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
             
             try {
-                // 今月の記録を取得
-                const { data: monthRecords, error } = await supabase
-                    .from('exercise_records')
-                    .select('*, exercises(*)')
-                    .eq('user_id', userId)
-                    .gte('record_date', currentMonth + '-01')
-                    .lt('record_date', getNextMonth(currentMonth) + '-01');
+                let monthRecords = [];
+                
+                if (isOfflineMode) {
+                    // オフラインモードではローカルの記録を使用
+                    const todayString = today.toISOString().split('T')[0];
+                    const currentMonthPrefix = todayString.substring(0, 7); // YYYY-MM
+                    
+                    Object.keys(records).forEach(dateKey => {
+                        if (dateKey.startsWith(currentMonthPrefix)) {
+                            Object.keys(records[dateKey]).forEach(exerciseId => {
+                                if (records[dateKey][exerciseId]) {
+                                    monthRecords.push({
+                                        exercise_id: parseInt(exerciseId),
+                                        record_date: dateKey,
+                                        completed: true
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    // オンラインモードではSupabaseから取得
+                    const { data, error } = await supabase
+                        .from('exercise_records')
+                        .select('*, exercises(*)')
+                        .eq('user_id', userId)
+                        .gte('record_date', currentMonth + '-01')
+                        .lt('record_date', getNextMonth(currentMonth) + '-01');
 
-                if (error) {
-                    console.error('月間記録取得エラー:', error);
-                    return;
+                    if (error) {
+                        console.error('月間記録取得エラー:', error);
+                        return;
+                    }
+                    monthRecords = data || [];
                 }
 
                 // 今月の予定日数を計算（各運動がスケジュールされている日数）
@@ -1790,7 +1813,7 @@
                         }
                     }
                     
-                    // 今月の予定日数を計算
+                    // 今月の今日までの予定日数を計算
                     let scheduledCount = 0;
                     for (let day = 1; day <= Math.min(daysInMonth, currentDate); day++) {
                         const date = new Date(today.getFullYear(), today.getMonth(), day);
@@ -1799,13 +1822,18 @@
                         }
                     }
                     
-                    // 実施回数を計算
-                    const completedCount = monthRecords?.filter(record => 
-                        record.exercise_id === exercise.id && record.completed
-                    ).length || 0;
+                    // 今月の今日までの実施回数を計算
+                    const completedCount = monthRecords.filter(record => {
+                        const recordDate = new Date(record.record_date);
+                        return record.exercise_id === exercise.id && 
+                               record.completed && 
+                               recordDate <= today;
+                    }).length;
                     
                     // 実施率を計算
                     const rate = scheduledCount > 0 ? Math.round((completedCount / scheduledCount) * 100) : 0;
+                    
+                    console.log(`${exercise.name}: ${completedCount}/${scheduledCount} = ${rate}%`);
                     
                     monthlyStats[exercise.id] = {
                         name: exercise.name,
