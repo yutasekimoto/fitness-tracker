@@ -1902,15 +1902,27 @@
             
             if (supabase) {
                 try {
-                    // 匿名認証を設定
-                    const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
-                    console.log('匿名認証結果:', authData, 'エラー:', authError);
+                    // 既存のセッションをチェック
+                    const { data: { session } } = await supabase.auth.getSession();
+                    console.log('既存セッション:', session ? 'あり' : 'なし');
                     
-                    if (authError) {
-                        console.error('匿名認証に失敗しました:', authError);
-                        // 認証に失敗した場合はオフラインモードで6種目を表示
-                        showOfflineMode();
-                        return;
+                    let authData;
+                    if (session) {
+                        // 既存セッションを使用
+                        authData = { user: session.user };
+                        console.log('既存セッションを再利用');
+                    } else {
+                        // 新規匿名認証
+                        const { data: newAuthData, error: authError } = await supabase.auth.signInAnonymously();
+                        console.log('新規匿名認証結果:', newAuthData, 'エラー:', authError);
+                        
+                        if (authError) {
+                            console.error('匿名認証に失敗しました:', authError);
+                            // 認証に失敗した場合はオフラインモードで6種目を表示
+                            showOfflineMode();
+                            return;
+                        }
+                        authData = newAuthData;
                     }
                     
                     // user_idをauth.uid()に更新
