@@ -180,16 +180,36 @@
             height: 100%;
             background-color: rgba(0,0,0,0.5);
             animation: fadeIn 0.3s;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .modal-content {
             background-color: white;
-            margin: 10% auto;
+            margin: 20px auto;
             padding: 0;
             border-radius: 15px;
             width: 90%;
             max-width: 500px;
+            max-height: calc(100vh - 40px);
             box-shadow: 0 4px 20px rgba(0,0,0,0.2);
             animation: slideIn 0.3s;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* スマホ対応 */
+        @media (max-width: 768px) {
+            .modal-content {
+                margin: 10px auto;
+                width: 95%;
+                max-height: calc(100vh - 20px);
+                border-radius: 10px;
+            }
+            .modal-body {
+                max-height: calc(100vh - 150px);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
         }
         .modal-header {
             padding: 20px 25px 15px;
@@ -712,6 +732,14 @@
                 const { data: { user } } = await supabase.auth.getUser();
                 console.log('現在の認証ユーザー:', user);
                 
+                // デバッグ: RLSポリシーテスト
+                console.log('RLSポリシーテスト開始');
+                const { data: testData, error: testError } = await supabase
+                    .from('exercises')
+                    .select('count(*)')
+                    .eq('user_id', userId);
+                console.log('RLSテスト結果:', testData, 'エラー:', testError);
+                
                 // 既存の運動種目をチェック
                 const { data: existingExercises, error: checkError } = await supabase
                     .from('exercises')
@@ -722,6 +750,8 @@
 
                 if (checkError) {
                     console.error('運動種目チェックエラー:', checkError);
+                    console.log('オフラインモードにフォールバック');
+                    showOfflineMode();
                     return;
                 }
 
@@ -846,11 +876,15 @@
                     } else {
                         console.log('初期データ作成完了');
                     }
+                } else {
+                    console.log('既存データが見つかりました:', existingExercises.length, '件');
                 }
                 
                 isInitialized = true;
             } catch (error) {
                 console.error('データ初期化エラー:', error);
+                console.log('エラーによりオフラインモードにフォールバック');
+                showOfflineMode();
             }
         }
 
