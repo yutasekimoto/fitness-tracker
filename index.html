@@ -627,8 +627,8 @@
         let supabase = null;
         
         try {
-            const SUPABASE_URL = 'https://zynxdxqhjbdfatwvxuib.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5bnhkeHFoamJkZmF0d3Z4dWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxODczMjQsImV4cCI6MjA2OTc2MzMyNH0.7Td6j7NG8tLV4fzAeDbDGqP3YE5JJp0LVqSAqmxm8q4';
+            const SUPABASE_URL = 'https://hsekpmpboawozvuwscf.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZWtwbXBib2F3b3p2dXdzY2YiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczNjI2MjEzOCwiZXhwIjoyMDUxODM4MTM4fQ.GwYmQGdFw0f6Zv8iLUcRgf6rF2wX5zBpzF2_A9xAP7s';
             
             if (window.supabase && window.supabase.createClient) {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1535,7 +1535,7 @@
                     
                     if (authError) {
                         console.error('匿名認証に失敗しました:', authError);
-                        // 認証に失敗した場合はローカル用のダミーデータを使用
+                        // 認証に失敗した場合はオフラインモードで6種目を表示
                         showOfflineMode();
                         return;
                     }
@@ -1555,11 +1555,7 @@
                 }
             } else {
                 console.warn('Supabaseが利用できません。オフラインモードで動作します。');
-                // オフライン用のダミーデータ表示
-                const today = new Date();
-                const { dateString, weekday } = formatDate(today);
-                document.getElementById('current-date').textContent = dateString;
-                document.getElementById('current-weekday').textContent = weekday;
+                showOfflineMode();
             }
             
             console.log('初期化完了');
