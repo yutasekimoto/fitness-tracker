@@ -780,6 +780,8 @@
                         .insert(initialExercises)
                         .select();
 
+                    console.log('初期運動種目作成結果:', createdExercises, 'エラー:', exerciseError);
+
                     if (exerciseError) {
                         console.error('初期運動種目作成エラー:', exerciseError);
                         return;
@@ -1527,11 +1529,11 @@
                     const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
                     console.log('匿名認証結果:', authData, 'エラー:', authError);
                     
-                    // user_idをセッションIDに更新
+                    // user_idをauth.uid()に更新
                     if (authData?.user?.id) {
                         userId = authData.user.id;
                         localStorage.setItem('fittracker_user_id', userId);
-                        console.log('ユーザーID更新:', userId);
+                        console.log('認証済みユーザーID:', userId);
                     }
                     
                     await initializeUserData();
