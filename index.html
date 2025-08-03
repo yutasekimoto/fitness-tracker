@@ -971,27 +971,39 @@
                 
                 records[today][exerciseId] = isCompleted;
 
-                // データベースに保存
-                const recordData = {
-                    user_id: userId,
-                    exercise_id: exerciseId,
-                    record_date: today,
-                    completed: isCompleted,
-                    completed_at: isCompleted ? new Date().toISOString() : null
-                };
-
-                const { error } = await supabase
-                    .from('exercise_records')
-                    .upsert(recordData, { 
-                        onConflict: 'user_id,exercise_id,record_date' 
-                    });
-
-                if (error) {
-                    console.error('記録保存エラー:', error);
-                    // エラーの場合は状態を戻す
-                    records[today][exerciseId] = !isCompleted;
+                if (isOfflineMode) {
+                    // オフラインモードでは記録をローカルストレージに保存
+                    const todayRecords = JSON.parse(localStorage.getItem('fittracker_records') || '{}');
+                    if (!todayRecords[today]) {
+                        todayRecords[today] = {};
+                    }
+                    todayRecords[today][exerciseId] = isCompleted;
+                    localStorage.setItem('fittracker_records', JSON.stringify(todayRecords));
+                    
+                    console.log('オフラインモードで記録保存成功:', exerciseId, isCompleted);
                 } else {
-                    console.log('記録保存成功:', exerciseId, isCompleted);
+                    // データベースに保存
+                    const recordData = {
+                        user_id: userId,
+                        exercise_id: exerciseId,
+                        record_date: today,
+                        completed: isCompleted,
+                        completed_at: isCompleted ? new Date().toISOString() : null
+                    };
+
+                    const { error } = await supabase
+                        .from('exercise_records')
+                        .upsert(recordData, { 
+                            onConflict: 'user_id,exercise_id,record_date' 
+                        });
+
+                    if (error) {
+                        console.error('記録保存エラー:', error);
+                        // エラーの場合は状態を戻す
+                        records[today][exerciseId] = !isCompleted;
+                    } else {
+                        console.log('記録保存成功:', exerciseId, isCompleted);
+                    }
                 }
                 
                 renderDailyView();
@@ -1183,45 +1195,85 @@
             }
             
             try {
-                const exerciseData = {
-                    user_id: userId,
-                    name: name,
-                    description: description,
-                    steps: steps,
-                    video_url: videoUrl,
-                    order_index: editingExerciseId ? undefined : exercises.length + 1
-                };
-                
-                let result;
-                if (editingExerciseId) {
-                    // 更新
-                    result = await supabase
-                        .from('exercises')
-                        .update(exerciseData)
-                        .eq('id', editingExerciseId)
-                        .eq('user_id', userId)
-                        .select();
+                if (isOfflineMode) {
+                    // オフラインモードでの保存
+                    if (editingExerciseId) {
+                        // 編集
+                        const exerciseIndex = exercises.findIndex(ex => ex.id === editingExerciseId);
+                        if (exerciseIndex !== -1) {
+                            exercises[exerciseIndex] = {
+                                ...exercises[exerciseIndex],
+                                name: name,
+                                description: description,
+                                steps: steps,
+                                video_url: videoUrl
+                            };
+                        }
+                    } else {
+                        // 新規追加
+                        const newExercise = {
+                            id: Date.now(), // 一意なIDを生成
+                            name: name,
+                            description: description,
+                            steps: steps,
+                            video_url: videoUrl,
+                            order_index: exercises.length + 1
+                        };
+                        exercises.push(newExercise);
+                    }
+                    
+                    // ローカルストレージに保存
+                    saveToLocalStorage();
+                    
+                    // 表示を更新
+                    renderDailyView();
+                    if (currentTab === 'exercises') {
+                        renderExercisesManagement();
+                    }
+                    
+                    console.log('オフラインモードで運動保存成功');
                 } else {
-                    // 新規作成
-                    result = await supabase
-                        .from('exercises')
-                        .insert(exerciseData)
-                        .select();
+                    // オンラインモードでの保存
+                    const exerciseData = {
+                        user_id: userId,
+                        name: name,
+                        description: description,
+                        steps: steps,
+                        video_url: videoUrl,
+                        order_index: editingExerciseId ? undefined : exercises.length + 1
+                    };
+                    
+                    let result;
+                    if (editingExerciseId) {
+                        // 更新
+                        result = await supabase
+                            .from('exercises')
+                            .update(exerciseData)
+                            .eq('id', editingExerciseId)
+                            .eq('user_id', userId)
+                            .select();
+                    } else {
+                        // 新規作成
+                        result = await supabase
+                            .from('exercises')
+                            .insert(exerciseData)
+                            .select();
+                    }
+                    
+                    if (result.error) {
+                        console.error('運動保存エラー:', result.error);
+                        alert('保存に失敗しました');
+                        return;
+                    }
+                    
+                    // データを再読み込み
+                    await loadData();
+                    
+                    console.log('運動保存成功:', result.data);
                 }
-                
-                if (result.error) {
-                    console.error('運動保存エラー:', result.error);
-                    alert('保存に失敗しました');
-                    return;
-                }
-                
-                // データを再読み込み
-                await loadData();
                 
                 // モーダルを閉じる
                 closeExerciseFormModal();
-                
-                console.log('運動保存成功:', result.data);
                 
             } catch (error) {
                 console.error('運動保存エラー:', error);
@@ -1239,23 +1291,49 @@
             }
             
             try {
-                const { error } = await supabase
-                    .from('exercises')
-                    .delete()
-                    .eq('id', exerciseId)
-                    .eq('user_id', userId);
-                
-                if (error) {
-                    console.error('運動削除エラー:', error);
-                    alert('削除に失敗しました');
-                    return;
+                if (isOfflineMode) {
+                    // オフラインモードでの削除
+                    const exerciseIndex = exercises.findIndex(ex => ex.id === exerciseId);
+                    if (exerciseIndex !== -1) {
+                        exercises.splice(exerciseIndex, 1);
+                    }
+                    
+                    // スケジュールからも削除
+                    Object.keys(schedule).forEach(dayOfWeek => {
+                        schedule[dayOfWeek] = schedule[dayOfWeek].filter(ex => ex.id !== exerciseId);
+                    });
+                    
+                    // ローカルストレージに保存
+                    saveToLocalStorage();
+                    
+                    // 表示を更新
+                    renderDailyView();
+                    if (currentTab === 'exercises') {
+                        renderExercisesManagement();
+                    } else if (currentTab === 'schedule') {
+                        renderScheduleManagement();
+                    }
+                    
+                    console.log('オフラインモードで運動削除成功:', exerciseId);
+                } else {
+                    // オンラインモードでの削除
+                    const { error } = await supabase
+                        .from('exercises')
+                        .delete()
+                        .eq('id', exerciseId)
+                        .eq('user_id', userId);
+                    
+                    if (error) {
+                        console.error('運動削除エラー:', error);
+                        alert('削除に失敗しました');
+                        return;
+                    }
+                    
+                    // データを再読み込み
+                    await loadData();
+                    
+                    console.log('運動削除成功:', exerciseId);
                 }
-                
-                // データを再読み込み
-                await loadData();
-                
-                console.log('運動削除成功:', exerciseId);
-                
             } catch (error) {
                 console.error('運動削除エラー:', error);
                 alert('削除に失敗しました');
@@ -1324,27 +1402,54 @@
         // スケジュールに運動を追加
         async function addToSchedule(dayOfWeek, exerciseId) {
             try {
-                const { error } = await supabase
-                    .from('schedules')
-                    .insert({
-                        user_id: userId,
-                        day_of_week: dayOfWeek,
-                        exercise_id: exerciseId
-                    });
+                const exercise = exercises.find(ex => ex.id === exerciseId);
+                if (!exercise) return;
+                
+                if (isOfflineMode) {
+                    // オフラインモードでの追加
+                    if (!schedule[dayOfWeek]) {
+                        schedule[dayOfWeek] = [];
+                    }
+                    
+                    // 重複チェック
+                    if (!schedule[dayOfWeek].find(ex => ex.id === exerciseId)) {
+                        schedule[dayOfWeek].push(exercise);
+                    }
+                    
+                    // ローカルストレージに保存
+                    saveToLocalStorage();
+                    
+                    // 表示を更新
+                    renderDailyView();
+                    if (currentTab === 'schedule') {
+                        renderScheduleManagement();
+                    }
+                    
+                    console.log('オフラインモードでスケジュール追加成功:', dayOfWeek, exerciseId);
+                } else {
+                    // オンラインモードでの追加
+                    const { error } = await supabase
+                        .from('schedules')
+                        .insert({
+                            user_id: userId,
+                            day_of_week: dayOfWeek,
+                            exercise_id: exerciseId
+                        });
 
-                if (error) {
-                    console.error('スケジュール追加エラー:', error);
-                    alert('追加に失敗しました');
-                    return;
+                    if (error) {
+                        console.error('スケジュール追加エラー:', error);
+                        alert('追加に失敗しました');
+                        return;
+                    }
+
+                    // データを再読み込み
+                    await loadData();
+                    
+                    console.log('スケジュール追加成功:', dayOfWeek, exerciseId);
                 }
-
-                // データを再読み込み
-                await loadData();
                 
                 // モーダルを閉じる
                 closeExerciseSelectModal();
-                
-                console.log('スケジュール追加成功:', dayOfWeek, exerciseId);
                 
             } catch (error) {
                 console.error('スケジュール追加エラー:', error);
@@ -1355,24 +1460,42 @@
         // スケジュールから運動を削除
         async function removeFromSchedule(dayOfWeek, exerciseId) {
             try {
-                const { error } = await supabase
-                    .from('schedules')
-                    .delete()
-                    .eq('user_id', userId)
-                    .eq('day_of_week', dayOfWeek)
-                    .eq('exercise_id', exerciseId);
+                if (isOfflineMode) {
+                    // オフラインモードでの削除
+                    if (schedule[dayOfWeek]) {
+                        schedule[dayOfWeek] = schedule[dayOfWeek].filter(ex => ex.id !== exerciseId);
+                    }
+                    
+                    // ローカルストレージに保存
+                    saveToLocalStorage();
+                    
+                    // 表示を更新
+                    renderDailyView();
+                    if (currentTab === 'schedule') {
+                        renderScheduleManagement();
+                    }
+                    
+                    console.log('オフラインモードでスケジュール削除成功:', dayOfWeek, exerciseId);
+                } else {
+                    // オンラインモードでの削除
+                    const { error } = await supabase
+                        .from('schedules')
+                        .delete()
+                        .eq('user_id', userId)
+                        .eq('day_of_week', dayOfWeek)
+                        .eq('exercise_id', exerciseId);
 
-                if (error) {
-                    console.error('スケジュール削除エラー:', error);
-                    alert('削除に失敗しました');
-                    return;
+                    if (error) {
+                        console.error('スケジュール削除エラー:', error);
+                        alert('削除に失敗しました');
+                        return;
+                    }
+
+                    // データを再読み込み
+                    await loadData();
+                    
+                    console.log('スケジュール削除成功:', dayOfWeek, exerciseId);
                 }
-
-                // データを再読み込み
-                await loadData();
-                
-                console.log('スケジュール削除成功:', dayOfWeek, exerciseId);
-                
             } catch (error) {
                 console.error('スケジュール削除エラー:', error);
                 alert('削除に失敗しました');
@@ -1632,6 +1755,12 @@
                     6: [exercises[0], exercises[4], exercises[5]]  // 土曜日: スクワット、ドローイング
                 };
                 saveToLocalStorage();
+            }
+            
+            // 記録を読み込み
+            const savedRecords = localStorage.getItem('fittracker_records');
+            if (savedRecords) {
+                records = JSON.parse(savedRecords);
             }
         }
         
