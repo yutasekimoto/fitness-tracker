@@ -1437,6 +1437,18 @@
                     // データを再読み込み
                     await loadData();
                     
+                    // 画面を更新
+                    if (currentTab === 'exercises') {
+                        renderExercisesManagement();
+                    } else if (currentTab === 'schedule') {
+                        renderScheduleManagement();
+                    }
+                    
+                    // 開いているモーダルも更新（新しい運動が選択可能になる）
+                    if (selectedDayOfWeek !== null && document.getElementById('exerciseSelectModal').style.display === 'block') {
+                        updateExerciseSelectModal();
+                    }
+                    
                     console.log('運動保存成功:', result.data);
                 }
                 
@@ -1504,6 +1516,19 @@
                     
                     // データを再読み込み
                     await loadData();
+                    
+                    // 画面を更新
+                    renderDailyView();
+                    if (currentTab === 'exercises') {
+                        renderExercisesManagement();
+                    } else if (currentTab === 'schedule') {
+                        renderScheduleManagement();
+                    }
+                    
+                    // 開いているモーダルも更新（削除した運動が選択肢から消える）
+                    if (selectedDayOfWeek !== null && document.getElementById('exerciseSelectModal').style.display === 'block') {
+                        updateExerciseSelectModal();
+                    }
                     
                     console.log('運動削除成功:', exerciseId);
                 }
