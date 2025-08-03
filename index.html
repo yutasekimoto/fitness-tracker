@@ -182,33 +182,57 @@
             animation: fadeIn 0.3s;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
+            padding: 10px;
+            box-sizing: border-box;
         }
         .modal-content {
             background-color: white;
-            margin: 20px auto;
+            margin: 0 auto;
             padding: 0;
             border-radius: 15px;
-            width: 90%;
+            width: 100%;
             max-width: 500px;
-            max-height: calc(100vh - 40px);
+            max-height: calc(100vh - 20px);
             box-shadow: 0 4px 20px rgba(0,0,0,0.2);
             animation: slideIn 0.3s;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+            position: relative;
         }
         
         /* スマホ対応 */
         @media (max-width: 768px) {
+            .modal {
+                padding: 5px;
+            }
             .modal-content {
-                margin: 10px auto;
-                width: 95%;
-                max-height: calc(100vh - 20px);
+                width: 100%;
+                max-height: calc(100vh - 10px);
                 border-radius: 10px;
+                margin-top: 5px;
             }
             .modal-body {
-                max-height: calc(100vh - 150px);
+                flex: 1;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
+                padding: 20px;
+            }
+            .modal-header {
+                flex-shrink: 0;
+                padding: 15px 20px 10px;
+            }
+            /* より小さい画面での調整 */
+            @media (max-height: 600px) {
+                .modal-content {
+                    max-height: calc(100vh - 5px);
+                    margin-top: 2px;
+                }
+                .modal-header {
+                    padding: 10px 15px 5px;
+                }
+                .modal-body {
+                    padding: 15px;
+                }
             }
         }
         .modal-header {
@@ -241,6 +265,9 @@
         }
         .modal-body {
             padding: 25px;
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .detail-section {
             margin-bottom: 20px;
@@ -472,6 +499,115 @@
             border-radius: 12px;
             font-size: 12px;
             font-weight: bold;
+        }
+        
+        /* スケジュール管理のスマホ対応 */
+        @media (max-width: 768px) {
+            .day-schedule {
+                margin-bottom: 15px;
+            }
+            .day-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+            .day-name {
+                text-align: center;
+                font-size: 16px;
+                padding: 5px 0;
+            }
+            .add-exercise-btn {
+                width: 100%;
+                padding: 12px;
+                font-size: 14px;
+                border-radius: 8px;
+            }
+            .schedule-exercise {
+                padding: 12px 15px;
+                margin-bottom: 8px;
+                border-radius: 8px;
+            }
+            .schedule-exercise-name {
+                font-size: 14px;
+                margin-bottom: 5px;
+            }
+            .remove-exercise-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 18px;
+                line-height: 1;
+                padding: 0;
+                margin-left: 10px;
+            }
+            /* 運動選択モーダルの改善 */
+            .exercise-select-item {
+                padding: 15px;
+                margin-bottom: 8px;
+                border-radius: 8px;
+                font-size: 14px;
+                text-align: center;
+            }
+            .exercise-select-item:hover {
+                background: #e2e6ea !important;
+                transform: translateY(-1px);
+            }
+            .exercise-select-item:active {
+                background: #d1ecf1 !important;
+                transform: translateY(0);
+            }
+            /* フォームのスマホ対応 */
+            .form-group {
+                margin-bottom: 15px;
+            }
+            .form-label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: bold;
+                color: #495057;
+                font-size: 14px;
+            }
+            .form-input, .form-textarea {
+                width: 100%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 14px;
+                box-sizing: border-box;
+                font-family: inherit;
+            }
+            .form-textarea {
+                min-height: 80px;
+                resize: vertical;
+            }
+            .form-buttons {
+                display: flex;
+                gap: 10px;
+                margin-top: 20px;
+            }
+            .btn {
+                flex: 1;
+                padding: 12px 20px;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .btn-primary {
+                background: #007bff;
+                color: white;
+            }
+            .btn-primary:hover {
+                background: #0056b3;
+            }
+            .btn-secondary {
+                background: #6c757d;
+                color: white;
+            }
+            .btn-secondary:hover {
+                background: #5a6268;
+            }
         }
     </style>
 </head>
@@ -1066,6 +1202,19 @@
             }
         }
 
+        // 背景スクロール防止
+        function preventBodyScroll() {
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+        }
+        
+        function allowBodyScroll() {
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+        }
+
         // 運動詳細を表示
         function showExerciseInfo(exerciseId) {
             const exercise = exercises.find(ex => ex.id === exerciseId);
@@ -1113,19 +1262,28 @@
             }
             
             // モーダルを表示
+            preventBodyScroll();
             document.getElementById('exerciseModal').style.display = 'block';
         }
 
         // モーダルを閉じる
         function closeExerciseModal() {
             document.getElementById('exerciseModal').style.display = 'none';
+            allowBodyScroll();
         }
 
         // モーダル外クリックで閉じる
         document.addEventListener('click', function(event) {
-            const modal = document.getElementById('exerciseModal');
-            if (event.target === modal) {
+            const exerciseModal = document.getElementById('exerciseModal');
+            const formModal = document.getElementById('exerciseFormModal');
+            const selectModal = document.getElementById('exerciseSelectModal');
+            
+            if (event.target === exerciseModal) {
                 closeExerciseModal();
+            } else if (event.target === formModal) {
+                closeExerciseFormModal();
+            } else if (event.target === selectModal) {
+                closeExerciseSelectModal();
             }
         });
 
@@ -1155,6 +1313,7 @@
             editingExerciseId = null;
             document.getElementById('formModalTitle').textContent = '新しい運動を追加';
             document.getElementById('exerciseForm').reset();
+            preventBodyScroll();
             document.getElementById('exerciseFormModal').style.display = 'block';
         }
 
@@ -1171,12 +1330,14 @@
             document.getElementById('exerciseSteps').value = exercise.steps || '';
             document.getElementById('exerciseVideoUrl').value = exercise.video_url || '';
             
+            preventBodyScroll();
             document.getElementById('exerciseFormModal').style.display = 'block';
         }
 
         // 運動フォームモーダルを閉じる
         function closeExerciseFormModal() {
             document.getElementById('exerciseFormModal').style.display = 'none';
+            allowBodyScroll();
             editingExerciseId = null;
         }
 
@@ -1384,18 +1545,20 @@
                 container.innerHTML = '<div class="empty">追加できる運動がありません</div>';
             } else {
                 container.innerHTML = availableExercises.map(exercise => `
-                    <div class="exercise-item" onclick="addToSchedule(${dayOfWeek}, ${exercise.id})" style="cursor: pointer;">
+                    <div class="exercise-item exercise-select-item" onclick="addToSchedule(${dayOfWeek}, ${exercise.id})" style="cursor: pointer; background: #f8f9fa; transition: background 0.2s;">
                         <div class="exercise-name">${exercise.name}</div>
                     </div>
                 `).join('');
             }
             
+            preventBodyScroll();
             document.getElementById('exerciseSelectModal').style.display = 'block';
         }
 
         // 運動選択モーダルを閉じる
         function closeExerciseSelectModal() {
             document.getElementById('exerciseSelectModal').style.display = 'none';
+            allowBodyScroll();
             selectedDayOfWeek = null;
         }
 
@@ -1793,18 +1956,6 @@
         // フォーム送信イベント
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('exerciseForm').addEventListener('submit', saveExercise);
-            
-            // モーダル外クリックで閉じる（フォームモーダル）
-            document.addEventListener('click', function(event) {
-                const formModal = document.getElementById('exerciseFormModal');
-                const selectModal = document.getElementById('exerciseSelectModal');
-                
-                if (event.target === formModal) {
-                    closeExerciseFormModal();
-                } else if (event.target === selectModal) {
-                    closeExerciseSelectModal();
-                }
-            });
         });
     </script>
 </body>
