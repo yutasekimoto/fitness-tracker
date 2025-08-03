@@ -1660,6 +1660,15 @@
                     // データを再読み込み
                     await loadData();
                     
+                    // 画面を更新
+                    renderDailyView();
+                    if (currentTab === 'schedule') {
+                        renderScheduleManagement();
+                    }
+                    
+                    // モーダルの選択肢も更新
+                    updateExerciseSelectModal();
+                    
                     console.log('スケジュール追加成功:', dayOfWeek, exerciseId);
                 }
                 
@@ -1711,6 +1720,15 @@
 
                     // データを再読み込み
                     await loadData();
+                    
+                    // 画面を更新
+                    renderDailyView();
+                    if (currentTab === 'schedule') {
+                        renderScheduleManagement();
+                    }
+                    
+                    // モーダルの選択肢も更新（削除した運動が追加可能になる）
+                    updateExerciseSelectModal();
                     
                     console.log('スケジュール削除成功:', dayOfWeek, exerciseId);
                 }
