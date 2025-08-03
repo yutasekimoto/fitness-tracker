@@ -705,11 +705,20 @@
             if (!supabase || isInitialized) return;
             
             try {
+                console.log('initializeUserData開始 - userId:', userId);
+                
                 // 既存の運動種目をチェック
-                const { data: existingExercises } = await supabase
+                const { data: existingExercises, error: checkError } = await supabase
                     .from('exercises')
                     .select('*')
                     .eq('user_id', userId);
+
+                console.log('既存の運動種目をチェック:', existingExercises, 'エラー:', checkError);
+
+                if (checkError) {
+                    console.error('運動種目チェックエラー:', checkError);
+                    return;
+                }
 
                 if (!existingExercises || existingExercises.length === 0) {
                     console.log('初期データを作成中...');
@@ -1513,8 +1522,23 @@
             console.log('初期化開始');
             
             if (supabase) {
-                await initializeUserData();
-                await loadData();
+                try {
+                    // 匿名認証を設定
+                    const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+                    console.log('匿名認証結果:', authData, 'エラー:', authError);
+                    
+                    // user_idをセッションIDに更新
+                    if (authData?.user?.id) {
+                        userId = authData.user.id;
+                        localStorage.setItem('fittracker_user_id', userId);
+                        console.log('ユーザーID更新:', userId);
+                    }
+                    
+                    await initializeUserData();
+                    await loadData();
+                } catch (error) {
+                    console.error('初期化エラー:', error);
+                }
             } else {
                 console.warn('Supabaseが利用できません。オフラインモードで動作します。');
                 // オフライン用のダミーデータ表示
