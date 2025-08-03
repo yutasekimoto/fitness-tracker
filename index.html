@@ -802,6 +802,11 @@
         let schedule = {};
         let records = {};
         let userId = localStorage.getItem('fittracker_user_id') || generateUserId();
+        
+        // 固定ユーザーIDを使用（todoアプリと同じ方式）
+        if (!userId) {
+            userId = generateUserId();
+        }
         let isInitialized = false;
         let editingExerciseId = null;
         let selectedDayOfWeek = null;
@@ -1902,35 +1907,19 @@
             
             if (supabase) {
                 try {
-                    // 既存のセッションをチェック
-                    const { data: { session } } = await supabase.auth.getSession();
-                    console.log('既存セッション:', session ? 'あり' : 'なし');
+                    console.log('固定ユーザーID使用:', userId);
                     
-                    let authData;
-                    if (session) {
-                        // 既存セッションを使用
-                        authData = { user: session.user };
-                        console.log('既存セッションを再利用');
-                    } else {
-                        // 新規匿名認証
-                        const { data: newAuthData, error: authError } = await supabase.auth.signInAnonymously();
-                        console.log('新規匿名認証結果:', newAuthData, 'エラー:', authError);
-                        
-                        if (authError) {
-                            console.error('匿名認証に失敗しました:', authError);
-                            // 認証に失敗した場合はオフラインモードで6種目を表示
-                            showOfflineMode();
-                            return;
-                        }
-                        authData = newAuthData;
+                    // 匿名認証（セッション管理はSupabaseに任せる）
+                    const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+                    
+                    if (authError) {
+                        console.error('匿名認証に失敗しました:', authError);
+                        // 認証に失敗した場合はオフラインモードで6種目を表示
+                        showOfflineMode();
+                        return;
                     }
                     
-                    // user_idをauth.uid()に更新
-                    if (authData?.user?.id) {
-                        userId = authData.user.id;
-                        localStorage.setItem('fittracker_user_id', userId);
-                        console.log('認証済みユーザーID:', userId);
-                    }
+                    console.log('匿名認証成功 - 固定ユーザーID:', userId, 'を使用');
                     
                     await initializeUserData();
                     await loadData();
