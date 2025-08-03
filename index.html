@@ -652,7 +652,10 @@
             <div id="exercises-tab" class="tab-content" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3 style="margin: 0;">種目管理</h3>
-                    <button onclick="openAddExerciseModal()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">+ 新規追加</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="restoreFromBackup()" style="background: #ffc107; color: #212529; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px;">復旧</button>
+                        <button onclick="openAddExerciseModal()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">+ 新規追加</button>
+                    </div>
                 </div>
                 
                 <div id="exercises-list" class="exercise-list">
@@ -1911,11 +1914,17 @@
 
         // ローカルストレージからデータを読み込み
         function loadFromLocalStorage() {
+            console.log('ローカルストレージからデータを読み込み開始');
+            
             const savedExercises = localStorage.getItem('fittracker_exercises');
             const savedSchedule = localStorage.getItem('fittracker_schedule');
             
+            console.log('保存済み運動種目:', savedExercises ? 'あり' : 'なし');
+            console.log('保存済みスケジュール:', savedSchedule ? 'あり' : 'なし');
+            
             if (savedExercises) {
                 exercises = JSON.parse(savedExercises);
+                console.log('ローカルストレージから運動種目を読み込み:', exercises.length, '件');
             } else {
                 // 初回起動時のデフォルト運動種目
                 exercises = [
@@ -1926,36 +1935,92 @@
                     { id: 5, name: 'ドローイング（朝）', description: '朝のドローイング（腹筋運動）です', steps: '1. 仰向けに寝るか立った状態で\n2. 鼻から息をゆっくり吸う\n3. 口から息を吐きながらお腹をへこませる', video_url: 'https://www.youtube.com/watch?v=pAecrJq3tiI', order_index: 5 },
                     { id: 6, name: 'ドローイング（夜）', description: '夜のドローイング（腹筋運動）です', steps: '1. リラックスした状態で行う\n2. 鼻から深く息を吸う\n3. 口から長く息を吐きながらお腹をへこませる', video_url: 'https://www.youtube.com/watch?v=pAecrJq3tiI', order_index: 6 }
                 ];
-                saveToLocalStorage();
+                console.log('デフォルト運動種目を設定:', exercises.length, '件');
+                // 初回のみデフォルトデータを設定（既存データは上書きしない）
+                if (!savedExercises && !savedSchedule) {
+                    saveToLocalStorage();
+                }
             }
             
             if (savedSchedule) {
                 schedule = JSON.parse(savedSchedule);
+                console.log('ローカルストレージからスケジュールを読み込み:', Object.keys(schedule).length, '曜日分');
             } else {
-                // 初回起動時のデフォルトスケジュール
+                // 初回起動時のデフォルトスケジュール（exercises配列のインデックスではなくIDで参照）
+                const squatExercise = exercises.find(ex => ex.name === 'スクワット') || exercises[0];
+                const pullupExercise = exercises.find(ex => ex.name === '懸垂') || exercises[1];
+                const dumbbellExercise = exercises.find(ex => ex.name.includes('ダンベル')) || exercises[2];
+                const runningExercise = exercises.find(ex => ex.name === 'ランニング') || exercises[3];
+                const drawingMorningExercise = exercises.find(ex => ex.name === 'ドローイング（朝）') || exercises[4];
+                const drawingEveningExercise = exercises.find(ex => ex.name === 'ドローイング（夜）') || exercises[5];
+                
                 schedule = {
-                    0: [exercises[0], exercises[4], exercises[5]], // 日曜日: スクワット、ドローイング
-                    1: [exercises[1], exercises[0], exercises[4], exercises[5]], // 月曜日: 懸垂、スクワット、ドローイング
-                    2: [exercises[3], exercises[4], exercises[5]], // 火曜日: ランニング、ドローイング
-                    3: [exercises[2], exercises[4], exercises[5]], // 水曜日: ダンベル上半身、ドローイング
-                    4: [exercises[1], exercises[0], exercises[4], exercises[5]], // 木曜日: 懸垂、スクワット、ドローイング
-                    5: [exercises[3], exercises[4], exercises[5]], // 金曜日: ランニング、ドローイング
-                    6: [exercises[0], exercises[4], exercises[5]]  // 土曜日: スクワット、ドローイング
+                    0: [squatExercise, drawingMorningExercise, drawingEveningExercise], // 日曜日
+                    1: [pullupExercise, squatExercise, drawingMorningExercise, drawingEveningExercise], // 月曜日
+                    2: [runningExercise, drawingMorningExercise, drawingEveningExercise], // 火曜日
+                    3: [dumbbellExercise, drawingMorningExercise, drawingEveningExercise], // 水曜日
+                    4: [pullupExercise, squatExercise, drawingMorningExercise, drawingEveningExercise], // 木曜日
+                    5: [runningExercise, drawingMorningExercise, drawingEveningExercise], // 金曜日
+                    6: [squatExercise, drawingMorningExercise, drawingEveningExercise]  // 土曜日
                 };
-                saveToLocalStorage();
+                console.log('デフォルトスケジュールを設定');
+                // 初回のみデフォルトデータを設定（既存データは上書きしない）
+                if (!savedExercises && !savedSchedule) {
+                    saveToLocalStorage();
+                }
             }
             
             // 記録を読み込み
             const savedRecords = localStorage.getItem('fittracker_records');
             if (savedRecords) {
                 records = JSON.parse(savedRecords);
+                console.log('ローカルストレージから記録を読み込み:', Object.keys(records).length, '日分');
             }
         }
         
         // ローカルストレージにデータを保存
         function saveToLocalStorage() {
-            localStorage.setItem('fittracker_exercises', JSON.stringify(exercises));
-            localStorage.setItem('fittracker_schedule', JSON.stringify(schedule));
+            console.log('ローカルストレージに保存中:', {
+                exercises: exercises.length + '件',
+                schedule: Object.keys(schedule).length + '曜日分'
+            });
+            
+            try {
+                // バックアップ作成
+                const timestamp = new Date().toISOString();
+                localStorage.setItem('fittracker_exercises_backup', localStorage.getItem('fittracker_exercises') || '[]');
+                localStorage.setItem('fittracker_schedule_backup', localStorage.getItem('fittracker_schedule') || '{}');
+                localStorage.setItem('fittracker_backup_timestamp', timestamp);
+                
+                // メインデータ保存
+                localStorage.setItem('fittracker_exercises', JSON.stringify(exercises));
+                localStorage.setItem('fittracker_schedule', JSON.stringify(schedule));
+                console.log('ローカルストレージ保存成功（バックアップ:', timestamp, '）');
+            } catch (error) {
+                console.error('ローカルストレージ保存エラー:', error);
+            }
+        }
+        
+        // データ復旧機能
+        function restoreFromBackup() {
+            const backupExercises = localStorage.getItem('fittracker_exercises_backup');
+            const backupSchedule = localStorage.getItem('fittracker_schedule_backup');
+            const backupTimestamp = localStorage.getItem('fittracker_backup_timestamp');
+            
+            if (backupExercises && backupSchedule) {
+                exercises = JSON.parse(backupExercises);
+                schedule = JSON.parse(backupSchedule);
+                renderDailyView();
+                if (currentTab === 'exercises') {
+                    renderExercisesManagement();
+                } else if (currentTab === 'schedule') {
+                    renderScheduleManagement();
+                }
+                alert(`データを復旧しました（バックアップ: ${backupTimestamp}）`);
+                console.log('バックアップからデータを復旧:', backupTimestamp);
+            } else {
+                alert('復旧可能なバックアップが見つかりません');
+            }
         }
 
         // ローカルモード表示
