@@ -627,8 +627,8 @@
         let supabase = null;
         
         try {
-            const SUPABASE_URL = 'https://hsekpmpboawozvuwscf.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZWtwbXBib2F3b3p2dXdzY2YiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczNjI2MjEzOCwiZXhwIjoyMDUxODM4MTM4fQ.GwYmQGdFw0f6Zv8iLUcRgf6rF2wX5zBpzF2_A9xAP7s';
+            const SUPABASE_URL = 'https://cyngclcqdrdjcuccbke.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmdlbGNxZHJkamN1Y2Nia2UiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczNjI2MjEzOCwiZXhwIjoyMDUxODM4MTM4fQ.GwYmQGdFw0f6Zv8iLUcRgf6rF2wX5zBpzF2_A9xAP7s';
             
             if (window.supabase && window.supabase.createClient) {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -651,6 +651,7 @@
         let selectedDayOfWeek = null;
         let monthlyStats = {};
         let recentRecords = [];
+        let isOfflineMode = false;
 
         // タブ切り替え
         function showTab(tabName) {
@@ -1561,26 +1562,64 @@
             console.log('初期化完了');
         }
 
-        // オフラインモード表示
+        // ローカルストレージからデータを読み込み
+        function loadFromLocalStorage() {
+            const savedExercises = localStorage.getItem('fittracker_exercises');
+            const savedSchedule = localStorage.getItem('fittracker_schedule');
+            
+            if (savedExercises) {
+                exercises = JSON.parse(savedExercises);
+            } else {
+                // 初回起動時のデフォルト運動種目
+                exercises = [
+                    { id: 1, name: 'スクワット', description: '下半身を鍛える基本的な運動です', steps: '1. 足を肩幅に開く\n2. 背筋を伸ばし、胸を張る\n3. お尻を後ろに引きながらゆっくりしゃがむ', video_url: 'https://www.youtube.com/watch?v=aclHkVaku9U', order_index: 1 },
+                    { id: 2, name: '懸垂', description: '上半身（特に背筋）を鍛える運動です', steps: '1. 鉄棒を肩幅よりやや広めに握る\n2. 肩甲骨を寄せて胸を張る\n3. あごがバーの高さまで体を引き上げる', video_url: 'https://www.youtube.com/watch?v=eGo4IYlbE5g', order_index: 2 },
+                    { id: 3, name: 'ダンベル上半身（プレス／ロー／レイズ）', description: 'ダンベルを使った上半身トレーニングです', steps: '【プレス】\n1. ベンチに仰向けになる\n2. ダンベルを胸の上で構える\n3. ゆっくり胸まで下ろす', video_url: 'https://www.youtube.com/watch?v=gRVjAtPip0Y', order_index: 3 },
+                    { id: 4, name: 'ランニング', description: '有酸素運動で心肺機能を向上させます', steps: '1. 軽いストレッチでウォーミングアップ\n2. ゆっくりとしたペースで開始\n3. 呼吸を意識して一定のリズムを保つ', video_url: 'https://www.youtube.com/watch?v=9L2b2khySLE', order_index: 4 },
+                    { id: 5, name: 'ドローイング（朝）', description: '朝のドローイング（腹筋運動）です', steps: '1. 仰向けに寝るか立った状態で\n2. 鼻から息をゆっくり吸う\n3. 口から息を吐きながらお腹をへこませる', video_url: 'https://www.youtube.com/watch?v=pAecrJq3tiI', order_index: 5 },
+                    { id: 6, name: 'ドローイング（夜）', description: '夜のドローイング（腹筋運動）です', steps: '1. リラックスした状態で行う\n2. 鼻から深く息を吸う\n3. 口から長く息を吐きながらお腹をへこませる', video_url: 'https://www.youtube.com/watch?v=pAecrJq3tiI', order_index: 6 }
+                ];
+                saveToLocalStorage();
+            }
+            
+            if (savedSchedule) {
+                schedule = JSON.parse(savedSchedule);
+            } else {
+                // 初回起動時のデフォルトスケジュール
+                schedule = {
+                    0: [exercises[0], exercises[4], exercises[5]], // 日曜日: スクワット、ドローイング
+                    1: [exercises[1], exercises[0], exercises[4], exercises[5]], // 月曜日: 懸垂、スクワット、ドローイング
+                    2: [exercises[3], exercises[4], exercises[5]], // 火曜日: ランニング、ドローイング
+                    3: [exercises[2], exercises[4], exercises[5]], // 水曜日: ダンベル上半身、ドローイング
+                    4: [exercises[1], exercises[0], exercises[4], exercises[5]], // 木曜日: 懸垂、スクワット、ドローイング
+                    5: [exercises[3], exercises[4], exercises[5]], // 金曜日: ランニング、ドローイング
+                    6: [exercises[0], exercises[4], exercises[5]]  // 土曜日: スクワット、ドローイング
+                };
+                saveToLocalStorage();
+            }
+        }
+        
+        // ローカルストレージにデータを保存
+        function saveToLocalStorage() {
+            localStorage.setItem('fittracker_exercises', JSON.stringify(exercises));
+            localStorage.setItem('fittracker_schedule', JSON.stringify(schedule));
+        }
+
+        // ローカルモード表示
         function showOfflineMode() {
-            console.warn('オフラインモードで動作します');
+            console.warn('ローカルモードで動作します');
+            isOfflineMode = true;
+            
             const today = new Date();
             const { dateString, weekday } = formatDate(today);
             document.getElementById('current-date').textContent = dateString;
             document.getElementById('current-weekday').textContent = weekday;
             
-            // ダミーの運動種目を表示
-            exercises = [
-                { id: 1, name: 'スクワット', description: '下半身を鍛える基本的な運動です' },
-                { id: 2, name: '懸垂', description: '上半身を鍛える運動です' },
-                { id: 3, name: 'ダンベル上半身', description: 'ダンベルを使った上半身トレーニングです' },
-                { id: 4, name: 'ランニング', description: '有酸素運動です' },
-                { id: 5, name: 'ドローイング（朝）', description: '朝のドローイングです' },
-                { id: 6, name: 'ドローイング（夜）', description: '夜のドローイングです' }
-            ];
+            // ローカルストレージからデータを読み込み
+            loadFromLocalStorage();
             
             renderDailyView();
-            console.log('オフラインモード初期化完了');
+            console.log('ローカルモード初期化完了');
         }
 
         // DOM読み込み完了時
