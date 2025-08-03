@@ -1,6 +1,9 @@
 -- 運動習慣トラッキングアプリ データベーススキーマ
 -- Supabase PostgreSQL用
 
+-- 0. 匿名認証を有効にする（Supabaseダッシュボードで設定）
+-- Authentication > Settings > Enable anonymous sign-ins: ON
+
 -- 1. 運動種目テーブル
 CREATE TABLE exercises (
     id SERIAL PRIMARY KEY,

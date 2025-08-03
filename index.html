@@ -627,8 +627,8 @@
         let supabase = null;
         
         try {
-            const SUPABASE_URL = 'https://hsekpmpboawozvuwscf.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZWtwbXBib2F3b3p2dXdzY2YiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczNjI2MjEzOCwiZXhwIjoyMDUxODM4MTM4fQ.GwYmQGdFw0f6Zv8iLUcRgf6rF2wX5zBpzF2_A9xAP7s';
+            const SUPABASE_URL = 'https://zynxdxqhjbdfatwvxuib.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5bnhkeHFoamJkZmF0d3Z4dWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxODczMjQsImV4cCI6MjA2OTc2MzMyNH0.7Td6j7NG8tLV4fzAeDbDGqP3YE5JJp0LVqSAqmxm8q4';
             
             if (window.supabase && window.supabase.createClient) {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1533,6 +1533,13 @@
                     const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
                     console.log('匿名認証結果:', authData, 'エラー:', authError);
                     
+                    if (authError) {
+                        console.error('匿名認証に失敗しました:', authError);
+                        // 認証に失敗した場合はローカル用のダミーデータを使用
+                        showOfflineMode();
+                        return;
+                    }
+                    
                     // user_idをauth.uid()に更新
                     if (authData?.user?.id) {
                         userId = authData.user.id;
@@ -1544,6 +1551,7 @@
                     await loadData();
                 } catch (error) {
                     console.error('初期化エラー:', error);
+                    showOfflineMode();
                 }
             } else {
                 console.warn('Supabaseが利用できません。オフラインモードで動作します。');
@@ -1555,6 +1563,28 @@
             }
             
             console.log('初期化完了');
+        }
+
+        // オフラインモード表示
+        function showOfflineMode() {
+            console.warn('オフラインモードで動作します');
+            const today = new Date();
+            const { dateString, weekday } = formatDate(today);
+            document.getElementById('current-date').textContent = dateString;
+            document.getElementById('current-weekday').textContent = weekday;
+            
+            // ダミーの運動種目を表示
+            exercises = [
+                { id: 1, name: 'スクワット', description: '下半身を鍛える基本的な運動です' },
+                { id: 2, name: '懸垂', description: '上半身を鍛える運動です' },
+                { id: 3, name: 'ダンベル上半身', description: 'ダンベルを使った上半身トレーニングです' },
+                { id: 4, name: 'ランニング', description: '有酸素運動です' },
+                { id: 5, name: 'ドローイング（朝）', description: '朝のドローイングです' },
+                { id: 6, name: 'ドローイング（夜）', description: '夜のドローイングです' }
+            ];
+            
+            renderDailyView();
+            console.log('オフラインモード初期化完了');
         }
 
         // DOM読み込み完了時
